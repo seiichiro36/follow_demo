@@ -1,0 +1,53 @@
+import Login from "./Components/Login";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged, User, getAuth } from "firebase/auth";
+import Home from "./Components/Home";
+import SetInitialStatus from "./Components/SetInitialStatus";
+import { Route, Routes } from "react-router-dom";
+
+function App() {
+  const [userStatus, setUserStatus] = useState({
+    username: "",
+    userId: "",
+    bid: "",
+  });
+
+  function useAuth() {
+    const [user, setUser] = useState<User | null>(null);
+
+    useEffect(() => {
+      const auth = getAuth();
+      const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+        setUser(currentUser);
+      });
+
+      return () => unsubscribe();
+    }, []);
+
+    return user;
+  }
+
+  const user = useAuth();
+  console.log("Home内のuser", user?.uid);
+
+  return (
+    <>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route
+          path="/initialSetting"
+          element={
+            <SetInitialStatus
+              userStatus={userStatus}
+              setUserStatus={setUserStatus}
+              user={user}
+            />
+          }
+        />
+        <Route path="/home" element={<Home />} />
+      </Routes>
+    </>
+  );
+}
+
+export default App;
