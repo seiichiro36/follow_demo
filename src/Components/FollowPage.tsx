@@ -1,15 +1,20 @@
 import {
   Avatar,
-  AvatarBadge,
   Box,
   Button,
+  Card,
+  CardBody,
+  CardFooter,
   Flex,
-  Spacer,
+  Heading,
+  HStack,
   Tab,
   TabList,
   TabPanel,
   TabPanels,
   Tabs,
+  Tag,
+  TagLabel,
   Text,
   Tooltip,
 } from "@chakra-ui/react";
@@ -32,9 +37,10 @@ interface Prop {
 const list = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
 function Follow() {
+  const tags = ["Python", "ロードバイク", "カメラ"];
   return (
     <>
-      <Box h="100vh">
+      {/* <Box h="100vh">
         <Box mt="20px" ml="20px">
           <Flex justifyContent="space-between">
             <Text>○○ 人</Text>
@@ -66,21 +72,122 @@ function Follow() {
             </Box>
           </Flex>
         </Box>
-      </Box>
+      </Box> */}
+      {list.map(() => (
+        <Card w="90%" variant="elevated" my={2}>
+          <CardBody>
+            <HStack spacing={4}>
+              <Avatar size="md" />
+              <Box flexGrow={1}>
+                <Flex justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Heading size="sm">せい</Heading>
+                    <Text fontSize="sm" color="gray.600">
+                      @seisei
+                    </Text>
+                  </Box>
+                  <HStack spacing={2}>
+                    {tags.map((tag, index) => (
+                      <Tag key={index} size="sm">
+                        <TagLabel>{tag}</TagLabel>
+                      </Tag>
+                    ))}
+                  </HStack>
+                </Flex>
+                <Text mt={2}>こんにちは世界</Text>
+              </Box>
+            </HStack>
+          </CardBody>
+          <CardFooter justifyContent="end">
+            <Button colorScheme="green">Follow</Button>
+          </CardFooter>
+        </Card>
+      ))}
     </>
   );
 }
+
 function Follower() {
+  const tags = ["Python", "ロードバイク", "カメラ"];
   return (
     <>
-      <p>Follower</p>
+      {/* <Box h="100vh">
+        <Box mt="20px" ml="20px">
+          <Flex justifyContent="space-between">
+            <Text>○○ 人</Text>
+          </Flex>
+          <Flex justifyContent="center">
+            <Box w="95%" bg="gray.200" borderRadius={"md"}>
+              <Flex alignItems="center" pt="70px" pb="40px" direction="column">
+                {list.map(() => (
+                  <Box
+                    w="98%"
+                    bg="gray.50"
+                    h="100px"
+                    borderRadius="lg"
+                    shadow="lg"
+                    m="4px"
+                  >
+                    <Flex>
+                      <Box pt="20px" pl="10px">
+                        <Avatar w="50px" h="50px">
+                          <Tooltip label="ログイン中">
+                            <AvatarBadge boxSize="1.25em" bg="green.500" />
+                          </Tooltip>
+                        </Avatar>
+                      </Box>
+                    </Flex>
+                  </Box>
+                ))}
+              </Flex>
+            </Box>
+          </Flex>
+        </Box>
+      </Box> */}
+      {list.map(() => (
+        <Card w="90%" variant="elevated" my={2}>
+          <CardBody>
+            <HStack spacing={4}>
+              <Avatar size="md" />
+              <Box flexGrow={1}>
+                <Flex justifyContent="space-between" alignItems="center">
+                  <Box>
+                    <Heading size="sm">せい</Heading>
+                    <Text fontSize="sm" color="gray.600">
+                      @seisei
+                    </Text>
+                  </Box>
+                  <HStack spacing={2}>
+                    {tags.map((tag, index) => (
+                      <Tag key={index} size="sm">
+                        <TagLabel>{tag}</TagLabel>
+                      </Tag>
+                    ))}
+                  </HStack>
+                </Flex>
+                <Text mt={2}>
+                  こんにちは、ChatGPTです。AIを使ってさまざまな質問に答えたり、情報を提供したりすることができます。言語理解や生成が得意で、文章の作成、アイデアの提案、プログラミングのサポートなど、幅広いタスクをサポートします。あなたのニーズに合わせた助言やサポートを提供し、プロジェクトの進行をお手伝いしますので、何でも気軽に聞いてください。いつでも、どこでも、あなたのサポート役としてお役に立てれば嬉しいです。
+                </Text>
+              </Box>
+            </HStack>
+          </CardBody>
+          <CardFooter justifyContent="end">
+            <Button colorScheme="green">Follow</Button>
+          </CardFooter>
+        </Card>
+      ))}
     </>
   );
 }
 function Search() {
   return (
     <>
-      <p>Search Page</p>
+      <Box>
+        <Flex justify="center" alignItems="center" direction="column">
+          <Text>ユーザ名で検索</Text>
+          <Text>タグ名で検索</Text>
+        </Flex>
+      </Box>
     </>
   );
 }
