@@ -58,7 +58,7 @@ const Mypage = ({ setGridCount }: Prop) => {
   };
   return (
     <>
-      <Box bg={"tomato"} h="100vh">
+      <Box bg={"green.200"} h="100vh">
         <Flex justifyContent="center">
           <Box w="50%" minWidth="600px" bg={"white"} h="100vh">
             <Box pr="10%">

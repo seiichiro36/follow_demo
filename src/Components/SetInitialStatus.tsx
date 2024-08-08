@@ -3,12 +3,14 @@ import {
   Box,
   Button,
   Center,
+  Divider,
   Flex,
   FormControl,
   FormErrorMessage,
   FormHelperText,
   FormLabel,
   HStack,
+  Image,
   Input,
   NumberDecrementStepper,
   NumberIncrementStepper,
@@ -32,7 +34,7 @@ import {
   useSteps,
 } from "@chakra-ui/react";
 import { ActionCodeOperation, signOut, User } from "firebase/auth";
-import { MouseEventHandler, useCallback, useState } from "react";
+import { MouseEventHandler, useCallback, useEffect, useState } from "react";
 import { auth, checkUserIdExists, checkUsernameExists } from "./firebase";
 import { ChevronRightIcon, DragHandleIcon } from "@chakra-ui/icons";
 import { useNavigate } from "react-router-dom";
@@ -68,14 +70,7 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
 
   const [input] = useState("");
 
-  const isError = input === "";
-
-  const forms = [
-    // 最初のフォーム（現在のフォーム）
-    <FirstSetStatusForm />,
-    // 新しいフォーム（スライドで表示するフォーム）
-    <SecondSetStatusForm />,
-  ];
+  const forms = [<FirstSetStatusForm />, <SecondSetStatusForm />];
 
   // ステータスメッセージ文字数警告用
 
@@ -99,8 +94,8 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
       username: user.displayName,
       userId: "",
       bid: "",
+      tags: [],
     });
-
     const handleInputChange = async (e: any) => {
       const { name, value } = e.target;
       if (name === "bid" && value.length > 200) {
@@ -108,12 +103,16 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
       } else {
         setIsInvalid(false);
       }
-      setInputValues((prevUser) => ({
+      setInputValues((prevUser: any) => ({
         ...prevUser,
         [name]: value,
       }));
       console.log(inputValues);
     };
+
+    useEffect(() => {
+      console.log("Component mounted or updated", inputValues);
+    }, [inputValues]);
 
     const [errorMEssage, setErrorMessage] = useState<string | null>("");
 
@@ -123,21 +122,26 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
       if (inputValues.userId === "") {
         if (inputValues.username === "") {
           setIsInvalidOnUsername(false);
+          setIsInvalidOnUserId(false);
+        } else {
+          setIsInvalidOnUsername(true);
+          setIsInvalidOnUserId(false);
         }
-        setIsInvalidOnUsername(true);
-        setIsInvalidOnUserId(false);
         setErrorMessage("値が入力されていません");
       } else if (existedUserId) {
         if (inputValues.username === "") {
           setIsInvalidOnUsername(false);
+          setIsInvalidOnUserId(false);
+        } else {
+          setIsInvalidOnUsername(true);
+          setIsInvalidOnUserId(false);
         }
-        setIsInvalidOnUsername(true);
-        setIsInvalidOnUserId(false);
         setErrorMessage("すでに存在しています");
       } else {
         setActiveStep((pre) => pre + 1);
       }
     };
+
     return (
       <Center>
         <Box
@@ -189,7 +193,7 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
             </FormControl>
 
             <Box w="60%" mx="auto" mt="20px">
-              <Text align="left">ステータスメッセージ(200文字以内):</Text>
+              <FormLabel>3, ステータスメッセージ(200文字以内):</FormLabel>
               <FormControl isInvalid={isInvalid}>
                 <Textarea
                   resize="none"
@@ -225,23 +229,46 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
     );
   }
 
-  function SecondSetStatusForm() {
+  function SecondSetStatusForm({ inputValues, setInputValues }: any) {
+    const [newTag, setNewTag] = useState({
+      name: "",
+      duration: 0,
+      unit: "",
+    });
+
+    const handleAddTag = () => {
+      setInputValues((prevState: any) => ({
+        ...prevState,
+        tags: [...prevState.tags, newTag],
+      }));
+      setNewTag({ name: "", duration: 0, unit: "日" });
+    };
+
+    console.log(newTag);
     return (
       <Center>
         <Box
           w="80%"
-          h="500px"
+          h="700px"
           bg="gray.100"
           borderRadius={"lg"}
           shadow={"lg"}
           position="relative"
         >
           <Box textAlign="center">
-            <Flex mt="80px">
+            <Flex mt="80px" w="80%">
               <Box flex="2">
                 <Stack pl="20px">
-                  <FormLabel pl="20px">4, アイコン画像を変更できます</FormLabel>
+                  <FormLabel pl="20px">
+                    4, ユーザアイコンを設定してください <br />
+                    <Text fontSize="14px" color="gray">
+                      　(設定しなかったらgoogleアカウントのアイコンを使用します)
+                    </Text>
+                  </FormLabel>
+
                   <Input
+                    w="350px"
+                    p="5px 0 0 20px"
                     // {...ragister("preview_url")}
                     type="file"
                     accept="image/*"
@@ -250,35 +277,85 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
                 </Stack>
               </Box>
               <Box flex="1">
-                <Avatar src="https://bit.ly/broken-link" />
+                <Avatar src="https://bit.ly/broken-link" w="100px" h="100px" />
+              </Box>
+            </Flex>
+            <Flex mt="40px" w="80%">
+              <Box flex="2">
+                <Stack pl="20px">
+                  <FormLabel pl="20px">
+                    5, ヘッダー画像を設定してください <br />
+                  </FormLabel>
+
+                  <Input
+                    w="350px"
+                    p="5px 0 0 20px"
+                    // {...ragister("preview_url")}
+                    type="file"
+                    accept="image/*"
+                    // onChange={onFileInputChange}
+                  />
+                </Stack>
+              </Box>
+              <Box flex="1">
+                <Image
+                  w="300px"
+                  h="150px"
+                  src="gibbresh.png"
+                  fallbackSrc="https://via.placeholder.com/150"
+                />
               </Box>
             </Flex>
 
             <Box>
               <FormLabel mt="40px" pl="40px">
-                5, タグを追加してください
+                6, タグを追加してください
               </FormLabel>
               <Flex>
                 <Center>
-                  <Input w="500px" />
+                  <Input
+                    w="100px"
+                    ml="30px"
+                    value={newTag.name}
+                    onChange={(e) =>
+                      setNewTag((prev) => ({ ...prev, name: e.target.value }))
+                    }
+                  />
                   <NumberInput
                     size="md"
                     w="100px"
-                    pl="40px"
                     defaultValue={0}
                     min={0}
+                    value={newTag.duration}
                   >
-                    <NumberInputField />
+                    <NumberInputField
+                      onChange={(e) =>
+                        setNewTag((prev) => ({
+                          ...prev,
+                          duration: Number(e.target.value),
+                        }))
+                      }
+                    />
                     <NumberInputStepper>
                       <NumberIncrementStepper />
                       <NumberDecrementStepper />
                     </NumberInputStepper>
                   </NumberInput>
-                  <Select placeholder="選択してください" w="200px">
+                  <Select
+                    placeholder="選択してください"
+                    w="200px"
+                    value={newTag.unit}
+                    onChange={(e) =>
+                      setNewTag((prev) => ({ ...prev, unit: e.target.value }))
+                    }
+                  >
                     <option value="option1">日</option>
                     <option value="option2">ヵ月</option>
                     <option value="option3">年</option>
                   </Select>
+                  <Button ml="20px" onClick={handleAddTag}>
+                    追加
+                  </Button>
                 </Center>
               </Flex>
             </Box>
@@ -296,6 +373,20 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
                   Next
                 </Button>
               </Flex>
+              {/* <Flex wrap="wrap" justify="center">
+                {inputValues.tags.map((tag: any, index: any) => (
+                  <Box
+                    key={index}
+                    bg="gray.200"
+                    borderRadius="md"
+                    px="4"
+                    py="2"
+                    m="2"
+                  >
+                    {tag.name} ({tag.duration} {tag.unit})
+                  </Box>
+                ))}
+              </Flex> */}
             </Box>
           </Box>
         </Box>
@@ -303,12 +394,9 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
     );
   }
 
-  console.log(userStatus);
-  console.log(activeStep);
-
   return (
     <>
-      <Box bg={"tomato"} h="100vh" w="100vw">
+      <Box bg={"green.200"} h="100vh" w="100vw">
         <Flex justifyContent="center">
           <Box h="100vh" bg={"gray.200"} w="50%">
             <Flex justifyContent="center" pt="50px">
