@@ -33,12 +33,11 @@ import {
   Textarea,
   useSteps,
 } from "@chakra-ui/react";
-import { ActionCodeOperation, signOut, User } from "firebase/auth";
-import { MouseEventHandler, useCallback, useEffect, useState } from "react";
-import { auth, checkUserIdExists, checkUsernameExists } from "./firebase";
-import { ChevronRightIcon, DragHandleIcon } from "@chakra-ui/icons";
-import { useNavigate } from "react-router-dom";
+import { User } from "firebase/auth";
+import { useState } from "react";
+import { checkUserIdExists } from "./firebase";
 import { AnimatePresence, motion } from "framer-motion";
+import { useForm } from "react-hook-form";
 
 interface Props {
   userStatus: {
@@ -63,84 +62,60 @@ const steps = [
 ];
 
 const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
+  // console.log(user);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { activeStep, setActiveStep } = useSteps({
     index: 0,
     count: steps.length,
   });
 
-  const [input] = useState("");
-
-  const forms = [<FirstSetStatusForm />, <SecondSetStatusForm />];
-
-  // ステータスメッセージ文字数警告用
-
   const activeStepText = steps[activeStep].description;
 
-  function FirstSetStatusForm() {
-    const [isInvalid, setIsInvalid] = useState<boolean>(false);
-    const [isInvalidOnUserId, setIsInvalidOnUserId] = useState<boolean>(true);
-    const [isInvalidOnUsername, setIsInvalidOnUsername] =
-      useState<boolean>(true);
+  const forms = [
+    <FirstSetStatusForm />,
+    <SecondSetStatusForm />,
+    <ThirdSetStatusFormForConfirm />,
+  ];
 
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    formState: { errors },
+    setError,
+    clearErrors,
+  } = useForm({ mode: "onChange" });
+
+  function FirstSetStatusForm() {
+    const onSubmit = async (data: any) => {
+      setIsSubmitting(true);
+      try {
+        const userIdExists = await checkUserIdExists(data.userId);
+        if (userIdExists) {
+          setError("userId", {
+            type: "manual",
+            message: "このユーザIDは既に使用されています",
+          });
+        } else {
+          clearErrors("userId");
+          console.log("通過");
+
+          console.log(data);
+          setActiveStep((pre) => pre + 1);
+        }
+      } catch (error) {
+        console.error("Error checking userId:", error);
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
     if (!user) {
       return null;
     }
-
     if (!user.displayName) {
       return null;
     }
-
-    const [inputValues, setInputValues] = useState({
-      username: user.displayName,
-      userId: "",
-      bid: "",
-      tags: [],
-    });
-    const handleInputChange = async (e: any) => {
-      const { name, value } = e.target;
-      if (name === "bid" && value.length > 200) {
-        setIsInvalid(true);
-      } else {
-        setIsInvalid(false);
-      }
-      setInputValues((prevUser: any) => ({
-        ...prevUser,
-        [name]: value,
-      }));
-      console.log(inputValues);
-    };
-
-    useEffect(() => {
-      console.log("Component mounted or updated", inputValues);
-    }, [inputValues]);
-
-    const [errorMEssage, setErrorMessage] = useState<string | null>("");
-
-    const handleNextStep = async () => {
-      const existedUserId = await checkUserIdExists(inputValues.userId);
-
-      if (inputValues.userId === "") {
-        if (inputValues.username === "") {
-          setIsInvalidOnUsername(false);
-          setIsInvalidOnUserId(false);
-        } else {
-          setIsInvalidOnUsername(true);
-          setIsInvalidOnUserId(false);
-        }
-        setErrorMessage("値が入力されていません");
-      } else if (existedUserId) {
-        if (inputValues.username === "") {
-          setIsInvalidOnUsername(false);
-          setIsInvalidOnUserId(false);
-        } else {
-          setIsInvalidOnUsername(true);
-          setIsInvalidOnUserId(false);
-        }
-        setErrorMessage("すでに存在しています");
-      } else {
-        setActiveStep((pre) => pre + 1);
-      }
-    };
 
     return (
       <Center>
@@ -153,98 +128,120 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
           position="relative"
         >
           <Box>
-            <FormControl
-              pt="40px"
-              w="60%"
-              mx="auto"
-              isInvalid={!isInvalidOnUsername}
-            >
-              <FormLabel>1, ユーザ名</FormLabel>
-              <Input
-                name="username"
-                type="text"
-                value={inputValues.username}
-                onChange={(e) => handleInputChange(e)}
-              />
-              {isInvalidOnUsername ? (
-                <FormHelperText></FormHelperText>
-              ) : (
-                <FormErrorMessage>ユーザ名を入力してください</FormErrorMessage>
-              )}
-            </FormControl>
-            <FormControl
-              pt="20px"
-              isInvalid={!isInvalidOnUserId}
-              w="60%"
-              mx="auto"
-            >
-              <FormLabel>2, ユーザID</FormLabel>
-              <Input
-                name="userId"
-                type="text"
-                value={inputValues.userId}
-                onChange={handleInputChange}
-              />
-              {isInvalidOnUserId ? (
-                <FormHelperText></FormHelperText>
-              ) : (
-                <FormErrorMessage>{errorMEssage}</FormErrorMessage>
-              )}
-            </FormControl>
-
-            <Box w="60%" mx="auto" mt="20px">
-              <FormLabel>3, ステータスメッセージ(200文字以内):</FormLabel>
-              <FormControl isInvalid={isInvalid}>
-                <Textarea
-                  resize="none"
-                  name="bid"
-                  value={inputValues.bid}
-                  onChange={handleInputChange}
-                  placeholder="Here is a sample placeholder"
-                  size="sm"
+            <form onSubmit={handleSubmit(onSubmit)}>
+              <FormControl
+                pt="40px"
+                w="60%"
+                mx="auto"
+                isInvalid={!!errors.username}
+              >
+                <FormLabel>1, ユーザ名</FormLabel>
+                <Input
+                  // name="username"
+                  type="text"
+                  defaultValue={user.displayName}
+                  {...register("username", {
+                    required: "ユーザ名を入力してください",
+                  })}
                 />
-                {isInvalid && (
+                {errors.username && (
                   <FormErrorMessage>
-                    200文字以内にしてください。
+                    {errors.username.message as React.ReactNode}
                   </FormErrorMessage>
                 )}
               </FormControl>
-            </Box>
-            <Box position="absolute" width="100%" bottom="0" left="0" p={4}>
-              <Flex w="80%" mx="auto" justify="center" alignItems="center">
-                <Button
-                  onClick={() =>
-                    setActiveStep((pre) => (activeStep == 0 ? pre : pre - 1))
-                  }
-                >
-                  あああ
-                </Button>
-                <Spacer />
-                <Button onClick={() => handleNextStep()}>Next</Button>
-              </Flex>
-            </Box>
+              <FormControl
+                pt="20px"
+                w="60%"
+                mx="auto"
+                isInvalid={!!errors.userId}
+              >
+                <FormLabel>2, ユーザID</FormLabel>
+                <Input
+                  // name="userId"
+                  type="text"
+                  {...register("userId", {
+                    required: "ユーザIDを入力してください",
+                  })}
+                />
+                {errors.userId && (
+                  <FormErrorMessage>
+                    {errors.userId.message as React.ReactNode}
+                  </FormErrorMessage>
+                )}
+              </FormControl>
+              <Box w="60%" mx="auto" mt="20px">
+                <FormLabel>3, ステータスメッセージ(200文字以内):</FormLabel>
+                <FormControl isInvalid={!!errors.bid}>
+                  <Textarea
+                    resize="none"
+                    // name="bid"
+                    {...register("bid", {
+                      maxLength: {
+                        value: 200,
+                        message: "200文字以内にしてください",
+                      },
+                    })}
+                    placeholder="こんにちは。ありがとう。さようなら"
+                    size="sm"
+                  />
+                  {errors.bid && (
+                    <FormErrorMessage>
+                      {errors.bid.message as React.ReactNode}
+                    </FormErrorMessage>
+                  )}
+                </FormControl>
+              </Box>
+              <Box position="absolute" width="100%" bottom="0" left="0" p={4}>
+                <Flex w="80%" mx="auto" justify="center" alignItems="center">
+                  <Button
+                    onClick={() =>
+                      setActiveStep((pre) => (activeStep == 0 ? pre : pre - 1))
+                    }
+                  >
+                    あああ
+                  </Button>
+                  <Spacer />
+                  <Button type="submit">Next</Button>
+                </Flex>
+              </Box>
+            </form>
           </Box>
         </Box>
       </Center>
     );
   }
 
-  function SecondSetStatusForm({ inputValues, setInputValues }: any) {
-    const [newTag, setNewTag] = useState({
-      name: "",
-      duration: 0,
-      unit: "",
-    });
+  function SecondSetStatusForm() {
+    const [profileImage, setProfileImage] = useState<string | null>("");
+    const [headerImage, setHeaderImage] = useState<string | null>("");
 
-    const handleAddTag = () => {
-      setInputValues((prevState: any) => ({
-        ...prevState,
-        tags: [...prevState.tags, newTag],
-      }));
-      setNewTag({ name: "", duration: 0, unit: "日" });
+    const onProfileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!e.target.files) return;
+
+      // React.ChangeEvent<HTMLInputElement>よりファイルを取得
+      const fileObject = e.target.files[0];
+      // オブジェクトURLを生成し、useState()を更新
+      setProfileImage(window.URL.createObjectURL(fileObject));
+    };
+    const onHeaderInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (!e.target.files) return;
+
+      // React.ChangeEvent<HTMLInputElement>よりファイルを取得
+      const fileObject = e.target.files[0];
+      // オブジェクトURLを生成し、useState()を更新
+      setHeaderImage(window.URL.createObjectURL(fileObject));
     };
 
-    console.log(newTag);
+    const onSubmit = (data: any) => {
+      console.log(data);
+      setActiveStep((pre) => pre + 1);
+    };
+
+    if (!user?.photoURL) {
+      return null;
+    }
+
     return (
       <Center>
         <Box
@@ -255,63 +252,90 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
           shadow={"lg"}
           position="relative"
         >
-          <Box textAlign="center">
-            <Flex mt="80px" w="80%">
-              <Box flex="2">
-                <Stack pl="20px">
-                  <FormLabel pl="20px">
-                    4, ユーザアイコンを設定してください <br />
-                    <Text fontSize="14px" color="gray">
-                      　(設定しなかったらgoogleアカウントのアイコンを使用します)
-                    </Text>
-                  </FormLabel>
-
-                  <Input
-                    w="350px"
-                    p="5px 0 0 20px"
-                    // {...ragister("preview_url")}
-                    type="file"
-                    accept="image/*"
-                    // onChange={onFileInputChange}
+          <form onSubmit={handleSubmit(onSubmit)}>
+            <Box textAlign="center">
+              <Flex mt="80px" w="80%">
+                <Box flex="2">
+                  <Stack pl="20px">
+                    <FormLabel pl="20px">
+                      4, ユーザアイコンを設定してください
+                      <br />
+                      <Text fontSize="14px" color="gray">
+                        　(設定しなかったらgoogleアカウントのアイコンを使用します)
+                      </Text>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        colorScheme="green"
+                        onClick={() => setProfileImage("")}
+                      >
+                        リセット
+                      </Button>
+                    </FormLabel>
+                    <Input
+                      w="350px"
+                      p="5px 0 0 20px"
+                      {...register("icon_filename")}
+                      type="file"
+                      accept="image/*"
+                      onChange={onProfileInputChange}
+                    />
+                  </Stack>
+                </Box>
+                <Box flex="1">
+                  <Avatar
+                    src={profileImage ? profileImage : user.photoURL}
+                    w="100px"
+                    h="100px"
                   />
-                </Stack>
-              </Box>
-              <Box flex="1">
-                <Avatar src="https://bit.ly/broken-link" w="100px" h="100px" />
-              </Box>
-            </Flex>
-            <Flex mt="40px" w="80%">
-              <Box flex="2">
-                <Stack pl="20px">
-                  <FormLabel pl="20px">
-                    5, ヘッダー画像を設定してください <br />
-                  </FormLabel>
+                </Box>
+              </Flex>
+              <Flex mt="40px" w="80%">
+                <Box flex="2">
+                  <Stack pl="20px">
+                    <FormLabel pl="20px">
+                      5, ヘッダー画像を設定してください <br />
+                    </FormLabel>
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      colorScheme="green"
+                      pl="20px"
+                      w="160px"
+                      onClick={() => setHeaderImage("")}
+                    >
+                      リセット
+                    </Button>
 
-                  <Input
-                    w="350px"
-                    p="5px 0 0 20px"
-                    // {...ragister("preview_url")}
-                    type="file"
-                    accept="image/*"
-                    // onChange={onFileInputChange}
+                    <Input
+                      w="350px"
+                      p="5px 0 0 20px"
+                      type="file"
+                      accept="image/*"
+                      {...register("header_filename")}
+                      onChange={onHeaderInputChange}
+                    />
+                  </Stack>
+                </Box>
+                <Box flex="1">
+                  <Image
+                    w="300px"
+                    h="150px"
+                    // src="gibbresh.png"
+                    fallbackSrc={
+                      headerImage
+                        ? headerImage
+                        : "https://via.placeholder.com/150"
+                    }
                   />
-                </Stack>
-              </Box>
-              <Box flex="1">
-                <Image
-                  w="300px"
-                  h="150px"
-                  src="gibbresh.png"
-                  fallbackSrc="https://via.placeholder.com/150"
-                />
-              </Box>
-            </Flex>
+                </Box>
+              </Flex>
 
-            <Box>
-              <FormLabel mt="40px" pl="40px">
-                6, タグを追加してください
-              </FormLabel>
-              <Flex>
+              <Box>
+                <FormLabel mt="40px" pl="40px">
+                  6, タグを追加してください
+                </FormLabel>
+                {/* <Flex>
                 <Center>
                   <Input
                     w="100px"
@@ -357,23 +381,21 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
                     追加
                   </Button>
                 </Center>
-              </Flex>
-            </Box>
-            <Box position="absolute" width="100%" bottom="0" left="0" p={4}>
-              <Flex w="80%" mx="auto" justify="center" alignItems="center">
-                <Button
-                  onClick={() =>
-                    setActiveStep((pre) => (activeStep == 0 ? pre : pre - 1))
-                  }
-                >
-                  あああ
-                </Button>
-                <Spacer />
-                <Button onClick={() => setActiveStep((pre) => pre + 1)}>
-                  Next
-                </Button>
-              </Flex>
-              {/* <Flex wrap="wrap" justify="center">
+              </Flex> */}
+              </Box>
+              <Box position="absolute" width="100%" bottom="0" left="0" p={4}>
+                <Flex w="80%" mx="auto" justify="center" alignItems="center">
+                  <Button
+                    onClick={() =>
+                      setActiveStep((pre) => (activeStep == 0 ? pre : pre - 1))
+                    }
+                  >
+                    あああ
+                  </Button>
+                  <Spacer />
+                  <Button type="submit">Next</Button>
+                </Flex>
+                {/* <Flex wrap="wrap" justify="center">
                 {inputValues.tags.map((tag: any, index: any) => (
                   <Box
                     key={index}
@@ -387,10 +409,17 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
                   </Box>
                 ))}
               </Flex> */}
+              </Box>
             </Box>
-          </Box>
+          </form>
         </Box>
       </Center>
+    );
+  }
+
+  function ThirdSetStatusFormForConfirm() {
+    return (
+      <Button onClick={() => setActiveStep((pre) => pre - 1)}>Back</Button>
     );
   }
 
@@ -403,11 +432,16 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
               <Stack>
                 <Stepper size="sm" index={activeStep} gap="0" w="500px">
                   {steps.map((step, index) => (
-                    <Step key={index} gap="0">
+                    <Step
+                      key={index}
+                      // gap="0"
+                    >
                       <StepIndicator>
                         <StepStatus complete={<StepIcon />} />
                       </StepIndicator>
-                      <StepSeparator _horizontal={{ ml: "0" }} />
+                      <StepSeparator
+                      // _horizontal={{ ml: "0" }}
+                      />
                     </Step>
                   ))}
                 </Stepper>
@@ -418,19 +452,21 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
             </Flex>
             <Flex justifyContent="center" mt="10px">
               <Box position="relative" overflow="hidden" h="100vh" w="100vw">
-                <AnimatePresence initial={false}>
+                <AnimatePresence initial={false} custom={activeStep}>
                   {forms.map((form, index) => (
                     <motion.div
                       key={index}
-                      initial={{ x: index === 0 ? 0 : "100%" }}
+                      custom={activeStep}
+                      initial={{ x: "100%" }}
                       animate={{
                         x:
-                          index === activeStep
+                          activeStep === index
                             ? 0
-                            : index < activeStep
+                            : activeStep > index
                             ? "-100%"
                             : "100%",
                       }}
+                      exit={{ x: activeStep > index ? "-100%" : "100%" }}
                       transition={{ type: "tween", duration: 0.5 }}
                       style={{
                         position: "absolute",
