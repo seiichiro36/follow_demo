@@ -4,6 +4,7 @@ import { onAuthStateChanged, User, getAuth } from "firebase/auth";
 import Home from "./Components/Home";
 import SetInitialStatus from "./Components/SetInitialStatus";
 import { Route, Routes } from "react-router-dom";
+import WelcomePage from "./Components/WelcomePage";
 
 function App() {
   const [userStatus, setUserStatus] = useState({
@@ -45,6 +46,7 @@ function App() {
           }
         />
         <Route path="/home" element={<Home />} />
+        <Route path="/welcome" element={<WelcomePage user={user}/>} />
       </Routes>
     </>
   );

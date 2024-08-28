@@ -82,7 +82,7 @@ const Login = () => {
   }
   return (
     <>
-      <Box bg={"tomato"} h="100vh" w="100vw">
+      <Box bg={"green.200"} h="100vh" w="100vw">
         <Flex justifyContent="center">
           <Box h="100vh" bg={"gray.200"} w="600px">
             <Flex flexDirection={"column"} alignItems={"center"}>
