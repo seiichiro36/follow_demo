@@ -34,10 +34,12 @@ import {
   useSteps,
 } from "@chakra-ui/react";
 import { User } from "firebase/auth";
-import { useState } from "react";
-import { checkUserIdExists } from "./firebase";
+import { useCallback, useRef, useState } from "react";
+import { checkUserIdExists, db } from "./firebase";
 import { AnimatePresence, motion } from "framer-motion";
 import { useForm } from "react-hook-form";
+import { doc, setDoc, updateDoc } from "firebase/firestore";
+import { Navigate, useNavigate } from "react-router-dom";
 
 interface Props {
   userStatus: {
@@ -80,11 +82,14 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
 
   const {
     register,
+    reset,
     handleSubmit,
     setValue,
     formState: { errors },
     setError,
     clearErrors,
+    getValues,
+    watch,
   } = useForm({ mode: "onChange" });
 
   function FirstSetStatusForm() {
@@ -194,13 +199,6 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
               </Box>
               <Box position="absolute" width="100%" bottom="0" left="0" p={4}>
                 <Flex w="80%" mx="auto" justify="center" alignItems="center">
-                  <Button
-                    onClick={() =>
-                      setActiveStep((pre) => (activeStep == 0 ? pre : pre - 1))
-                    }
-                  >
-                    あああ
-                  </Button>
                   <Spacer />
                   <Button type="submit">Next</Button>
                 </Flex>
@@ -214,16 +212,29 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
 
   function SecondSetStatusForm() {
     const [profileImage, setProfileImage] = useState<string | null>("");
+    const [iconFilename, setIconFilename] = useState<string | any>("");
     const [headerImage, setHeaderImage] = useState<string | null>("");
+    const [fileName, setFileName] = useState("");
 
     const onProfileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!e.target.files) return;
 
-      // React.ChangeEvent<HTMLInputElement>よりファイルを取得
       const fileObject = e.target.files[0];
-      // オブジェクトURLを生成し、useState()を更新
       setProfileImage(window.URL.createObjectURL(fileObject));
+      console.log(fileObject);
+      setIconFilename(fileObject.name);
+      setFileName(fileObject.name); // ファイル名を状態として保存
     };
+
+    const resetProfileImageFileInput = useCallback(() => {
+      // setIconFilename("");
+      setProfileImage(null);
+    }, []);
+
+    const resetHeaderFileInput = useCallback(() => {
+      setHeaderImage(null);
+    }, []);
+
     const onHeaderInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!e.target.files) return;
 
@@ -267,7 +278,7 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
                         variant="outline"
                         size="xs"
                         colorScheme="green"
-                        onClick={() => setProfileImage("")}
+                        onClick={resetProfileImageFileInput}
                       >
                         リセット
                       </Button>
@@ -302,7 +313,7 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
                       colorScheme="green"
                       pl="20px"
                       w="160px"
-                      onClick={() => setHeaderImage("")}
+                      onClick={resetHeaderFileInput}
                     >
                       リセット
                     </Button>
@@ -335,53 +346,6 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
                 <FormLabel mt="40px" pl="40px">
                   6, タグを追加してください
                 </FormLabel>
-                {/* <Flex>
-                <Center>
-                  <Input
-                    w="100px"
-                    ml="30px"
-                    value={newTag.name}
-                    onChange={(e) =>
-                      setNewTag((prev) => ({ ...prev, name: e.target.value }))
-                    }
-                  />
-                  <NumberInput
-                    size="md"
-                    w="100px"
-                    defaultValue={0}
-                    min={0}
-                    value={newTag.duration}
-                  >
-                    <NumberInputField
-                      onChange={(e) =>
-                        setNewTag((prev) => ({
-                          ...prev,
-                          duration: Number(e.target.value),
-                        }))
-                      }
-                    />
-                    <NumberInputStepper>
-                      <NumberIncrementStepper />
-                      <NumberDecrementStepper />
-                    </NumberInputStepper>
-                  </NumberInput>
-                  <Select
-                    placeholder="選択してください"
-                    w="200px"
-                    value={newTag.unit}
-                    onChange={(e) =>
-                      setNewTag((prev) => ({ ...prev, unit: e.target.value }))
-                    }
-                  >
-                    <option value="option1">日</option>
-                    <option value="option2">ヵ月</option>
-                    <option value="option3">年</option>
-                  </Select>
-                  <Button ml="20px" onClick={handleAddTag}>
-                    追加
-                  </Button>
-                </Center>
-              </Flex> */}
               </Box>
               <Box position="absolute" width="100%" bottom="0" left="0" p={4}>
                 <Flex w="80%" mx="auto" justify="center" alignItems="center">
@@ -395,20 +359,6 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
                   <Spacer />
                   <Button type="submit">Next</Button>
                 </Flex>
-                {/* <Flex wrap="wrap" justify="center">
-                {inputValues.tags.map((tag: any, index: any) => (
-                  <Box
-                    key={index}
-                    bg="gray.200"
-                    borderRadius="md"
-                    px="4"
-                    py="2"
-                    m="2"
-                  >
-                    {tag.name} ({tag.duration} {tag.unit})
-                  </Box>
-                ))}
-              </Flex> */}
               </Box>
             </Box>
           </form>
@@ -418,8 +368,53 @@ const SetInitialStatus = ({ userStatus, setUserStatus, user }: Props) => {
   }
 
   function ThirdSetStatusFormForConfirm() {
+    const inputUsername = getValues("username");
+    const inputUserId = getValues("userId");
+    const bid = getValues("bid");
+    const icon_filename = watch("icon_filename");
+    const header_filename = watch("header_filename");
+
+    const navigate = useNavigate();
+
+    if (!user) {
+      return;
+    }
+
+    const onSubmit = async () => {
+      try {
+        await updateDoc(doc(db, "users", user.uid), {
+          username: inputUsername,
+          userId: inputUserId,
+          bid: bid,
+          iconFilename: icon_filename?.[0]?.name,
+          headerFilename: header_filename?.[0]?.name,
+        }).then(() => {
+          console.log("初期設定完了しました。");
+          navigate("../welcome");
+        });
+      } catch (error) {
+        console.error("Error writing document: ", error);
+      }
+    };
+
     return (
-      <Button onClick={() => setActiveStep((pre) => pre - 1)}>Back</Button>
+      <>
+        <Button onClick={() => setActiveStep((pre) => pre - 1)}>Back</Button>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <br />
+          ユーザ名: {inputUsername}
+          <br />
+          ユーザID: {inputUserId}
+          <br />
+          ステータスメッセージ: {bid}
+          <br />
+          アイコン画像： {icon_filename?.[0]?.name}
+          <br />
+          アイコン画像： {header_filename?.[0]?.name}
+          <br />
+          <Button type="submit">送信</Button>
+        </form>
+      </>
     );
   }
 
