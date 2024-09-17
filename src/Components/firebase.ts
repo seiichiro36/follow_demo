@@ -16,6 +16,7 @@ import {
   writeBatch,
   updateDoc,
   arrayUnion,
+  orderBy,
 } from "firebase/firestore";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -39,8 +40,8 @@ export const provider = new GoogleAuthProvider();
 export async function checkUserDocumentExists() {
   return new Promise((resolve) => {
     onAuthStateChanged(auth, async (user) => {
-      if(!user) {
-        return null
+      if (!user) {
+        return null;
       }
       console.log("checkUserDocumentExists内のuid: ", user.uid);
       if (user) {
@@ -170,6 +171,94 @@ export async function toggleFollow(
   }
 }
 
+export async function getUserData(uid: any) {
+  // Firestoreのインスタンスを取得
+
+  // uidを使用してユーザードキュメントへの参照を作成
+  const userRef = doc(db, "users", uid);
+
+  try {
+    // ドキュメントのスナップショットを取得
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      const { username, userId, bid } = userSnap.data();
+      console.log(username, userId, bid);
+      return { username, userId, bid };
+    } else {
+      console.log("指定されたuidのユーザーが見つかりません");
+      return null;
+    }
+  } catch (error) {
+    console.error("データの取得中にエラーが発生しました:", error);
+    throw error;
+  }
+}
+
+interface PostData {
+  content: string;
+  createdAt: Date;
+}
+export const createPost = async (content: string): Promise<void> => {
+  const auth = getAuth();
+  const user = auth.currentUser;
+
+  if (!user) {
+    throw new Error("ユーザーがログインしていません。");
+  }
+
+  const postData: PostData = {
+    content: content,
+    createdAt: new Date(),
+  };
+
+  try {
+    // ユーザーのドキュメント内の 'posts' サブコレクションに新しい投稿を追加
+    const userPostsRef = collection(db, "users", user.uid, "posts");
+    await addDoc(userPostsRef, postData);
+    console.log("投稿が正常に保存されました。");
+    location.reload();
+  } catch (error) {
+    console.error("投稿の保存中にエラーが発生しました:", error);
+    throw error;
+  }
+};
+
+interface Post {
+  id: string;
+  content: string;
+  createdAt: Date;
+}
+
+export const getPosts = async (userId?: string): Promise<Post[]> => {
+  const auth = getAuth();
+  const db = getFirestore();
+
+  // ユーザーIDが指定されていない場合は、現在ログインしているユーザーの投稿を取得
+  const targetUserId = userId || auth.currentUser?.uid;
+
+  if (!targetUserId) {
+    throw new Error("ユーザーIDが指定されていないか、ログインしていません。");
+  }
+
+  try {
+    const userPostsRef = collection(db, "users", targetUserId, "posts");
+    const q = query(userPostsRef, orderBy("createdAt", "desc"));
+    const querySnapshot = await getDocs(q);
+
+    const posts: Post[] = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      content: doc.data().content,
+      createdAt: doc.data().createdAt.toDate(),
+    }));
+
+    return posts;
+  } catch (error) {
+    console.error("投稿の取得中にエラーが発生しました:", error);
+    throw error;
+  }
+};
+
 export async function updateUserProfile(user: any, userData: any) {
   const uid = user.uid;
 
@@ -193,18 +282,18 @@ export async function updateUserProfile(user: any, userData: any) {
 // 同じuserIdがないかの処理
 export async function checkUserIdExists(targetUserId: string) {
   const db = getFirestore();
-  const usersRef = collection(db, 'users');
-  
+  const usersRef = collection(db, "users");
+
   try {
     const querySnapshot = await getDocs(usersRef);
-    
+
     for (const doc of querySnapshot.docs) {
       const userData = doc.data();
       if (userData.userId === targetUserId) {
         return true; // 一致するuserIdが見つかった
       }
     }
-    
+
     return false; // 一致するuserIdが見つからなかった
   } catch (error) {
     console.error("Error checking userId:", error);

@@ -29,7 +29,7 @@ const Home = () => {
     <>
       <Box w="100vw">
         <Grid templateColumns={`repeat(${gridCount}, 1fr)`}>
-          <Mypage setGridCount={setGridCount} />
+          <Mypage setGridCount={setGridCount}  user={user}/>
           {gridCount === "2" || gridCount === "3" ? (
             <FollowPage setGridCount={setGridCount} user={user} />
           ) : (

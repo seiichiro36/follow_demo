@@ -8,4 +8,13 @@ export const theme = extendTheme({
       400: "#E53E3E", // さらに濃いトマト色
     },
   },
+  components: {
+    Button: {
+      baseStyle: {
+        _hover: {
+          borderColor: "transparent",
+        },
+      },
+    }
+  }
 });
