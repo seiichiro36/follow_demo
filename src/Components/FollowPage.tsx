@@ -21,6 +21,7 @@ import {
 import { ArrowLeftIcon } from "@chakra-ui/icons";
 import { toggleFollow, updateUserProfile } from "./firebase";
 import { User } from "firebase/auth";
+import { useState } from "react";
 
 const userData = {
   username: "新しいユーザー名",
@@ -109,41 +110,20 @@ function Follow() {
 
 function Follower() {
   const tags = ["Python", "ロードバイク", "カメラ"];
+
+  const [isFollowed, setIsFollow] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const handleFollow = () => {
+    setIsLoading(true);
+    setTimeout(() => {
+      // ここにフォロー処理を記述
+      setIsFollow((prev) => !prev);
+      setIsLoading(false);
+    }, 1000);
+  };
   return (
     <>
-      {/* <Box h="100vh">
-        <Box mt="20px" ml="20px">
-          <Flex justifyContent="space-between">
-            <Text>○○ 人</Text>
-          </Flex>
-          <Flex justifyContent="center">
-            <Box w="95%" bg="gray.200" borderRadius={"md"}>
-              <Flex alignItems="center" pt="70px" pb="40px" direction="column">
-                {list.map(() => (
-                  <Box
-                    w="98%"
-                    bg="gray.50"
-                    h="100px"
-                    borderRadius="lg"
-                    shadow="lg"
-                    m="4px"
-                  >
-                    <Flex>
-                      <Box pt="20px" pl="10px">
-                        <Avatar w="50px" h="50px">
-                          <Tooltip label="ログイン中">
-                            <AvatarBadge boxSize="1.25em" bg="green.500" />
-                          </Tooltip>
-                        </Avatar>
-                      </Box>
-                    </Flex>
-                  </Box>
-                ))}
-              </Flex>
-            </Box>
-          </Flex>
-        </Box>
-      </Box> */}
       {list.map(() => (
         <Card w="90%" variant="elevated" my={2}>
           <CardBody>
@@ -172,7 +152,14 @@ function Follower() {
             </HStack>
           </CardBody>
           <CardFooter justifyContent="end">
-            <Button colorScheme="green">Follow</Button>
+            <Button
+              colorScheme={isFollowed ? "blue" : "green"}
+              isLoading={isLoading}
+              size="sm"
+              onClick={handleFollow}
+            >
+              {isFollowed ? "フォロー済" : "フォロー"}
+            </Button>
           </CardFooter>
         </Card>
       ))}
@@ -206,8 +193,8 @@ const Timeline = ({ setGridCount, user }: Prop) => {
       <Box>
         <Button
           bg=""
-          _hover={{ bg: "aqua" }}
-          _active={{ bg: "aqua" }}
+          _hover={{ bg: "gray.200" , borderColor: "white"}}
+          _active={{ bg: "gray.100"}}
           onClick={() => setGridCount("1")}
         >
           <ArrowLeftIcon />
