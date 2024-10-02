@@ -13,10 +13,13 @@ import {
   Heading,
   HStack,
   Image,
+  Modal,
+  ModalOverlay,
   Progress,
   SkeletonCircle,
   SkeletonText,
   Spacer,
+  Spinner,
   Stack,
   Tag,
   TagLabel,
@@ -51,6 +54,7 @@ var tagList = [
 
 interface Prop {
   setGridCount: React.Dispatch<React.SetStateAction<"1" | "2" | "3">>;
+  setTabIndex:  React.Dispatch<React.SetStateAction<number>>;
   user: any;
 }
 interface UserData {
@@ -64,7 +68,7 @@ interface Post {
   createdAt: Date;
 }
 
-const Mypage: React.FC<Prop> = ({ setGridCount, user }: Prop) => {
+const Mypage: React.FC<Prop> = ({ setGridCount, setTabIndex,  user }: Prop) => {
   let navigate = useNavigate();
   const [userData, setUserData] = useState<UserData | null>(null);
 
@@ -79,7 +83,7 @@ const Mypage: React.FC<Prop> = ({ setGridCount, user }: Prop) => {
   const [isFollowed, setIsFollow] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const [isPosting, setIsPosting] = useState(true);
+  const [isPosting, setIsPosting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -126,6 +130,7 @@ const Mypage: React.FC<Prop> = ({ setGridCount, user }: Prop) => {
       alert("ログアウトに失敗しました。もう一度お試しください。");
     }
   };
+
   const getBoxHeight = () => {
     if (existedPost) return "auto";
     if (displayContentOfPost) return "auto";
@@ -135,80 +140,56 @@ const Mypage: React.FC<Prop> = ({ setGridCount, user }: Prop) => {
   const handleInputChange = (e: any) => {
     setPostContent(e.target.value);
   };
+  const  updatePostList = async() => {
+    const posts = await getPosts(user.uid);
+    setPostData(posts)
+  }
 
-  const handlePost = () => {
+
+  const handlePost = async () => {
     if (!postContent.trim()) return;
     console.log("投稿内容:", postContent);
-
     setIsPosting(true);
     try {
-      createPost(postContent);
+      
+          setTimeout( async () => {
+            setIsPosting(false);
+            await createPost(postContent);
+            await updatePostList()
+          }, 1000)
       setPostContent("");
     } catch (error) {
       console.error("Error adding document: ", error);
     } finally {
-      setIsPosting(false);
+      console.log("final中")
+      console.log("progressBar", isPosting)
+      
       setPostContent("");
       setDisplayContentOfPost(false);
     }
   };
 
-  // const handlePost = useCallback(async (content) => {
-  //   if (!content.trim()) return;
-
-  //   setIsPosting(true);
-  //   const optimisticPost = {
-  //     id: Date.now().toString(), // 一時的なID
-  //     content: content,
-  //     createdAt: new Date(),
-  //     username: userData?.username,
-  //     userId: userData?.userId,
-  //   };
-
-  //   setPosts(prevPosts => [optimisticPost, ...prevPosts]);
-  //   setShowPostForm(false);
-
-  //   try {
-  //     await createPost(content);
-  //     toast({
-  //       title: "投稿が完了しました",
-  //       status: "success",
-  //       duration: 3000,
-  //       isClosable: true,
-  //     });
-  //   } catch (error) {
-  //     console.error("Error adding document: ", error);
-  //     toast({
-  //       title: "投稿に失敗しました",
-  //       description: "もう一度お試しください。",
-  //       status: "error",
-  //       duration: 3000,
-  //       isClosable: true,
-  //     });
-  //     // 楽観的に追加した投稿を削除
-  //     setPosts(prevPosts => prevPosts.filter(post => post.id !== optimisticPost.id));
-  //   } finally {
-  //     setIsPosting(false);
-  //   }
-  // }, [userData, toast]);
   return (
     <>
       <Box bg={"green.200"} h="100%">
+        
+
         <Flex justifyContent="center">
+        
           <Box w="50%" minWidth="600px" h={getBoxHeight()} bg={"white"}>
-            {isPosting && (
-              <Box width="100%">
-                <Center mb={2}>ポスト中...</Center>
-                <Progress size="xs" isIndeterminate colorScheme="green" />
-              </Box>
-            )}
+
             <Box pr="10%" pt="40px">
+            
+              
               <Flex>
+                
                 <Spacer />
+                
                 <Button
                   mr="10px"
-                  backgroundColor={"blue.200"}
+                  backgroundColor={"green.200"}
                   borderRadius="10px"
+                  color={"white"}
                   onClick={() => setDisplayContentOfPost((pre) => !pre)}
                 >
                   <AddIcon />
@@ -235,6 +216,7 @@ const Mypage: React.FC<Prop> = ({ setGridCount, user }: Prop) => {
                 objectFit="fill"
                 backgroundSize="cover"
                 backgroundPosition="center"
+                userSelect={"none"}
               >
                 <Box
                   position="absolute"
@@ -244,6 +226,7 @@ const Mypage: React.FC<Prop> = ({ setGridCount, user }: Prop) => {
                   height="110px"
                   backdropFilter="blur(10px)"
                   zIndex=""
+                  // userSelect={"none"}
                 ></Box>
                 <Box
                   zIndex="10"
@@ -254,13 +237,13 @@ const Mypage: React.FC<Prop> = ({ setGridCount, user }: Prop) => {
                 >
                   <Flex>
                     <HStack>
-                      <Avatar w="80px" h="80px">
+                      <Avatar userSelect={"none"} w="80px" h="80px">
                         <Tooltip label="ログイン中">
                           <AvatarBadge boxSize="1.25em" bg="green.500" />
                         </Tooltip>
                       </Avatar>
                       <Stack pl="10px">
-                        <Text>{username}</Text>
+                        <Text userSelect={"none"}>{username}</Text>
                         <Text>{userId}</Text>
                       </Stack>
                     </HStack>
@@ -270,7 +253,11 @@ const Mypage: React.FC<Prop> = ({ setGridCount, user }: Prop) => {
                         w="200px"
                         colorScheme="green"
                         color="white"
-                        onClick={() => setGridCount("2")}
+                        onClick={() => {
+                          setGridCount("2")
+                          setTabIndex(0)
+                        }
+                        }
                       >
                         フォロー
                       </Button>
@@ -278,7 +265,11 @@ const Mypage: React.FC<Prop> = ({ setGridCount, user }: Prop) => {
                         w="200px"
                         colorScheme="green"
                         color="white"
-                        onClick={() => setGridCount("2")}
+                        onClick={() => {
+                          setGridCount("2")
+                          setTabIndex(1)
+                        }
+                        }
                       >
                         フォロワー
                       </Button>
@@ -323,7 +314,6 @@ const Mypage: React.FC<Prop> = ({ setGridCount, user }: Prop) => {
                           type="submit"
                           colorScheme="green"
                           onClick={handlePost}
-                          // isDisabled={!postContent.trim()}
                         >
                           投稿する
                         </Button>
@@ -332,7 +322,16 @@ const Mypage: React.FC<Prop> = ({ setGridCount, user }: Prop) => {
                   ) : (
                     <></>
                   )}
-
+          {isPosting && (
+              <Spinner
+              thickness='4px'
+              speed='0.65s'
+              emptyColor='gray.200'
+              color='green.300'
+              size='xl'
+              colorScheme="green" 
+            />
+            )}
                   <Box mt="20px">
                     {existedPost ? (
                       <div>

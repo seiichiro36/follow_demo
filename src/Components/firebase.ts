@@ -217,7 +217,6 @@ export const createPost = async (content: string): Promise<void> => {
     const userPostsRef = collection(db, "users", user.uid, "posts");
     await addDoc(userPostsRef, postData);
     console.log("投稿が正常に保存されました。");
-    location.reload();
   } catch (error) {
     console.error("投稿の保存中にエラーが発生しました:", error);
     throw error;
