@@ -25,13 +25,16 @@ const Home = () => {
   console.log("Home内のuser", user?.uid);
 
   const [gridCount, setGridCount] = useState<"1" | "2" | "3">("1");
+  
+  const [tabIndex, setTabIndex] = useState(0);
+
   return (
     <>
       <Box w="100vw">
         <Grid templateColumns={`repeat(${gridCount}, 1fr)`}>
-          <Mypage setGridCount={setGridCount}  user={user}/>
+          <Mypage setGridCount={setGridCount} setTabIndex={setTabIndex} user={user}/>
           {gridCount === "2" || gridCount === "3" ? (
-            <FollowPage setGridCount={setGridCount} user={user} />
+            <FollowPage setGridCount={setGridCount} tabIndex={tabIndex} setTabIndex={setTabIndex }user={user} />
           ) : (
             <></>
           )}

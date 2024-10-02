@@ -33,6 +33,8 @@ const userData = {
 interface Prop {
   setGridCount: React.Dispatch<React.SetStateAction<"1" | "2" | "3">>;
   user: User | null;
+  tabIndex: number;
+  setTabIndex: React.Dispatch<React.SetStateAction<number>>
 }
 
 const list = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
@@ -179,7 +181,7 @@ function Search() {
   );
 }
 
-const Timeline = ({ setGridCount, user }: Prop) => {
+const Timeline = ({ setGridCount, user, tabIndex ,setTabIndex }: Prop) => {
   const handleToggleFollow = () => {
     toggleFollow(user, "d9kwELKe39TVlHT7nkNU5gONTGI2");
   };
@@ -188,6 +190,10 @@ const Timeline = ({ setGridCount, user }: Prop) => {
     updateUserProfile(user, userData);
   };
 
+
+  const handleTabChange = (index:any) => {
+    setTabIndex(index);
+  };
   return (
     <>
       <Box>
@@ -199,7 +205,7 @@ const Timeline = ({ setGridCount, user }: Prop) => {
         >
           <ArrowLeftIcon />
         </Button>
-        <Tabs variant="soft-rounded" colorScheme="green" ml="30px" mt="30px">
+        <Tabs variant="soft-rounded" colorScheme="green" ml="30px" mt="30px" index={tabIndex} onChange={handleTabChange}>
           <TabList>
             <Tab>Follow</Tab>
             <Tab ml="20px">Follower</Tab>
