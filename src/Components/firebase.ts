@@ -17,6 +17,7 @@ import {
   updateDoc,
   arrayUnion,
   orderBy,
+  DocumentData,
 } from "firebase/firestore";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -257,6 +258,35 @@ export const getPosts = async (userId?: string): Promise<Post[]> => {
     throw error;
   }
 };
+
+// フォロワーを抽出
+export async function get_followers(target_follower: any) {
+  const follow_ref = collection(db, "follows");
+  const q = query(follow_ref, where("follower", "==", target_follower));
+
+  const querySnapshot = await getDocs(q);
+  const followings: DocumentData[] = [];
+
+  querySnapshot.forEach((doc) => {
+    const data = doc.data();
+    if(data.following) {
+      followings.push(data.following)
+    }
+  })
+
+
+  return followings;
+}
+
+export function getFollowingUsers(targetFollowers: any) {
+  const follow_list: DocumentData[]  = []
+  
+  targetFollowers.forEach(async (userUid: any) => {
+    const data: any = await getUserData(userUid)
+    follow_list.push(data)
+  })
+  return follow_list;
+}
 
 export async function updateUserProfile(user: any, userData: any) {
   const uid = user.uid;

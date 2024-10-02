@@ -19,9 +19,10 @@ import {
   Tooltip,
 } from "@chakra-ui/react";
 import { ArrowLeftIcon } from "@chakra-ui/icons";
-import { toggleFollow, updateUserProfile } from "./firebase";
+import { toggleFollow, updateUserProfile, get_followers, getFollowingUsers } from "./firebase";
 import { User } from "firebase/auth";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { DocumentData } from "firebase/firestore";
 
 const userData = {
   username: "新しいユーザー名",
@@ -41,41 +42,10 @@ const list = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 
 function Follow() {
   const tags = ["Python", "ロードバイク", "カメラ"];
+
+
   return (
     <>
-      {/* <Box h="100vh">
-        <Box mt="20px" ml="20px">
-          <Flex justifyContent="space-between">
-            <Text>○○ 人</Text>
-          </Flex>
-          <Flex justifyContent="center">
-            <Box w="95%" bg="gray.200" borderRadius={"md"}>
-              <Flex alignItems="center" pt="70px" pb="40px" direction="column">
-                {list.map(() => (
-                  <Box
-                    w="98%"
-                    bg="gray.50"
-                    h="100px"
-                    borderRadius="lg"
-                    shadow="lg"
-                    m="4px"
-                  >
-                    <Flex>
-                      <Box pt="20px" pl="10px">
-                        <Avatar w="50px" h="50px">
-                          <Tooltip label="ログイン中">
-                            <AvatarBadge boxSize="1.25em" bg="green.500" />
-                          </Tooltip>
-                        </Avatar>
-                      </Box>
-                    </Flex>
-                  </Box>
-                ))}
-              </Flex>
-            </Box>
-          </Flex>
-        </Box>
-      </Box> */}
       {list.map(() => (
         <Card w="90%" variant="elevated" my={2}>
           <CardBody>
@@ -182,6 +152,34 @@ function Search() {
 }
 
 const Timeline = ({ setGridCount, user, tabIndex ,setTabIndex }: Prop) => {
+  const [userfollowers, setUserfollowers] =  useState<DocumentData[]>([]);
+  // 下が表示されるフォロー一覧表示
+  const [followingUsers, setFollowingUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (user) {
+        try {
+          console.log(user.uid)
+          const user_followers = await get_followers(user.uid)
+
+          console.log(user_followers);
+          setUserfollowers(user_followers);
+          
+          const following = getFollowingUsers(user_followers);
+          setFollowingUsers(following);
+
+        } catch (error) {
+          console.error("ユーザデータの取得中にエラーが発生しました", error);
+        }
+      }
+    };
+    fetchData()
+
+  }, [user]);
+  
+
+
   const handleToggleFollow = () => {
     toggleFollow(user, "d9kwELKe39TVlHT7nkNU5gONTGI2");
   };
@@ -194,6 +192,8 @@ const Timeline = ({ setGridCount, user, tabIndex ,setTabIndex }: Prop) => {
   const handleTabChange = (index:any) => {
     setTabIndex(index);
   };
+
+
   return (
     <>
       <Box>

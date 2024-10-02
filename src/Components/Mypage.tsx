@@ -351,24 +351,20 @@ const Mypage: React.FC<Prop> = ({ setGridCount, setTabIndex,  user }: Prop) => {
                                         @seisei
                                       </Text>
                                     </Box>
-                                    <HStack spacing={2}>
-                                      <Tag size="sm">
-                                        <TagLabel>Python</TagLabel>
-                                      </Tag>
-                                    </HStack>
+     
                                   </Flex>
                                   <Text mt={2}>{post.content}</Text>
                                 </Box>
                               </HStack>
                             </CardBody>
+                            
                             <CardFooter justifyContent="end">
-                              <Button
-                                colorScheme={isFollowed ? "blue" : "green"}
-                                isLoading={isLoading}
-                                size="sm"
-                              >
-                                {isFollowed ? "フォロー済" : "フォロー"}
-                              </Button>
+                            <HStack spacing={2}>
+                                      <Tag size="sm">
+                                        <TagLabel>Python</TagLabel>
+                                        <TagLabel>Python</TagLabel>
+                                      </Tag>
+                                    </HStack>
                             </CardFooter>
                           </Card>
                         ))}
