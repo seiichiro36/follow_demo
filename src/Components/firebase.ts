@@ -260,8 +260,9 @@ export const getPosts = async (userId?: string): Promise<Post[]> => {
 };
 
 // フォロワーを抽出
-export async function get_followers(target_follower: any) {
+export async function get_following(target_follower: any) {
   const follow_ref = collection(db, "follows");
+
   const q = query(follow_ref, where("follower", "==", target_follower));
 
   const querySnapshot = await getDocs(q);
@@ -278,13 +279,34 @@ export async function get_followers(target_follower: any) {
   return followings;
 }
 
-export function getFollowingUsers(targetFollowers: any) {
-  const follow_list: DocumentData[]  = []
-  
-  targetFollowers.forEach(async (userUid: any) => {
-    const data: any = await getUserData(userUid)
-    follow_list.push(data)
+
+export async function get_follower(own_uid: any) {
+  const follow_ref = collection(db, "follows");
+
+  const q = query(follow_ref, where("following", "==", own_uid));
+
+  const querySnapshot = await getDocs(q);
+  const followings: DocumentData[] = [];
+
+  querySnapshot.forEach((doc) => {
+    const data = doc.data();
+    if(data.follower) {
+      followings.push(data.follower)
+    }
   })
+
+
+  return followings;
+}
+
+export async function getFollowingUsers(targetFollowers: any[]): Promise<DocumentData[]> {
+  const follow_list: DocumentData[] = [];
+
+  for (const userUid of targetFollowers) {
+    const data: any = await getUserData(userUid);
+    follow_list.push(data);
+  }
+
   return follow_list;
 }
 
