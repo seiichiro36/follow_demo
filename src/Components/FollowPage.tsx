@@ -19,7 +19,7 @@ import {
   Tooltip,
 } from "@chakra-ui/react";
 import { ArrowLeftIcon } from "@chakra-ui/icons";
-import { toggleFollow, updateUserProfile, get_following, get_follower,  getFollowingUsers } from "./firebase";
+import { toggleFollow, updateUserProfile, get_following, get_follower,  getFollowingUsers, get_follow_userinfo } from "./firebase";
 import { User } from "firebase/auth";
 import { useEffect, useState } from "react";
 import { DocumentData } from "firebase/firestore";
@@ -44,43 +44,50 @@ function Follow({user}: any) {
   const [isFollowed, setIsFollow] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const [followingUsers, setFollowingUsers] = useState<any[]>([]);
+  const [followingUsers, setFollowingUsers] = useState<string[] | null>([]);
   
   useEffect(() => {
     const fetchData = async () => {
       if (user) {
         try {
-          console.log(user.uid)
-          const user_followers = await get_following(user.uid)
-          console.log("followingUser", user_followers)
+          const user_followers = await get_following(user.uid);
+          console.log("followingUser", user_followers);
           if (user_followers.length > 0) {
-            const following =  getFollowingUsers(user_followers);
-            setFollowingUsers(await following);
+            const following = await get_follow_userinfo(user_followers);
+            console.log("Fetched following users:", following);
+            setFollowingUsers(following);
           } else {
-            
+            setFollowingUsers([]);
           }
         } catch (error) {
           console.error("ユーザデータの取得中にエラーが発生しました", error);
+          setFollowingUsers([]);
         }
       }
     };
-    fetchData()
-   
+    fetchData();
   }, [user]);
+  
+  console.log("followingUsers", followingUsers);
 
-  const handleFollow = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      // ここにフォロー処理を記述
-      setIsFollow((prev) => !prev);
-      setIsLoading(false);
-    }, 1000);
+  const handleFollow = (username: any) => {
+    // setIsLoading(true);
+    // setTimeout(() => {
+    //   // ここにフォロー処理を記述
+    //   setIsFollow((prev) => !prev);
+    //   setIsLoading(false);
+    // }, 1000)
+    console.log(username);
+    
   };
+
+  console.log("folloeingUsers", followingUsers)
+
   const tags = ["Python", "ロードバイク", "カメラ"];
   return (
     <>
       {followingUsers.map(({username, userId, bid}: any) => (
-        <Card w="90%" variant="elevated" my={2}>
+        <Card w="90%" variant="elevated" my={2} key={userId}>
         <CardBody>
           <HStack spacing={4}>
             <Avatar size="md" />
@@ -108,12 +115,12 @@ function Follow({user}: any) {
         </CardBody>
         <CardFooter justifyContent="end">
           <Button
-            colorScheme={isFollowed ? "blue" : "green"}
+            colorScheme={username === username ? "blue" : "green"}
             isLoading={isLoading}
             size="sm"
-            onClick={handleFollow}
+            onClick={() => handleFollow(username)}
           >
-            {isFollowed ? "フォロー済" : "フォロー"}
+            {username === username ? "フォロー済" : "フォロー"}
           </Button>
         </CardFooter>
       </Card>
