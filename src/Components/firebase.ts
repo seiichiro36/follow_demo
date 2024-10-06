@@ -131,6 +131,40 @@ export async function confirmExistedEmail(
     return false;
   }
 }
+
+interface UserDataProps {
+  username: string;
+  userId: string;
+  bid: string;
+}
+
+
+export async function getUserData(currentUserId: string):Promise<UserDataProps | null> {
+  // Firestoreのインスタンスを取得
+
+  // uidを使用してユーザードキュメントへの参照を作成
+  const userRef = doc(db, "users", currentUserId);
+
+  try {
+    // ドキュメントのスナップショットを取得
+    const userSnap = await getDoc(userRef);
+
+    if (userSnap.exists()) {
+      const { username, userId, bid } = userSnap.data();
+      console.log(username, userId, bid);
+      return { username, userId, bid };
+    } else {
+      console.log("指定されたuidのユーザーが見つかりません");
+      return null;
+    }
+  } catch (error) {
+    console.error("データの取得中にエラーが発生しました:", error);
+    throw error;
+  }
+}
+
+
+// Follow関連
 export async function toggleFollow(
   currentUser: User | null,
   targetUserId: string
@@ -172,29 +206,114 @@ export async function toggleFollow(
   }
 }
 
-export async function getUserData(uid: any) {
-  // Firestoreのインスタンスを取得
 
-  // uidを使用してユーザードキュメントへの参照を作成
-  const userRef = doc(db, "users", uid);
+// フォロワーを抽出
+export async function get_following(currentUserId: string):Promise<string[]> {
+  const userData = await getUserData(currentUserId);
 
-  try {
-    // ドキュメントのスナップショットを取得
-    const userSnap = await getDoc(userRef);
-
-    if (userSnap.exists()) {
-      const { username, userId, bid } = userSnap.data();
-      console.log(username, userId, bid);
-      return { username, userId, bid };
-    } else {
-      console.log("指定されたuidのユーザーが見つかりません");
-      return null;
-    }
-  } catch (error) {
-    console.error("データの取得中にエラーが発生しました:", error);
-    throw error;
+  if (!userData) {
+    console.error('ユーザーデータが見つかりません');
+    return [];
   }
+
+  const { userId } = userData;
+  console.log("get_followingのユーザ名", userId);
+  
+
+  const follow_ref = collection(db, "follows");
+
+  const q = query(follow_ref, where("from", "==", userId));
+
+  
+
+  const querySnapshot = await getDocs(q);
+  const followings: string[] = [];
+    console.log("クエリ結果のドキュメント数:", querySnapshot.size);
+
+
+    
+  querySnapshot.forEach((doc) => {
+    const data = doc.data();
+    console.log(data)
+    if(data.to) {
+      followings.push(data.to)
+    }
+  })
+
+  console.log("get_followingの中身", followings);
+  
+  return followings;
 }
+
+
+export async function get_follower(own_uid: any) {
+  const follow_ref = collection(db, "follows");
+  
+
+  const q = query(follow_ref, where("following", "==", own_uid));
+
+  const querySnapshot = await getDocs(q);
+  const followings: DocumentData[] = [];
+
+  querySnapshot.forEach((doc) => {
+    const data = doc.data();
+    if(data.follower) {
+      followings.push(data.follower)
+    }
+  })
+
+
+  return followings;
+}
+
+export async function getFollowingUsers(targetFollower: any[]): Promise<string[]> {
+  const following_list: string[] = [];
+
+  for (const userUid of targetFollower) {
+    const data: any = await getUserData(userUid);
+    following_list.push(data);
+  }
+
+  return following_list;
+}
+
+export function unfollowing_user(){
+
+}
+
+export async function get_follow_userinfo(userIds: string[]): Promise<string[]> {
+  const user_ref = collection(db, "users");
+  const followings: string[] = [];
+
+  // バッチで処理するために、userIdsを小さなチャンクに分割
+  const chunks = userIds.reduce((resultArray, item, index) => { 
+    const chunkIndex = Math.floor(index / 10)
+    if(!resultArray[chunkIndex]) {
+      resultArray[chunkIndex] = []
+    }
+    resultArray[chunkIndex].push(item)
+    return resultArray
+  }, [] as string[][])
+
+  for (const chunk of chunks) {
+    const q = query(user_ref, where("userId", "in", chunk));
+    const querySnapshot = await getDocs(q);
+    
+    console.log("クエリ結果のドキュメント数:", querySnapshot.size);
+    
+    querySnapshot.forEach((doc) => {
+      const data = doc.data();
+      console.log(data);
+      if(data) {
+        followings.push({username: data.username, userId: data.userId, bid: data.bid});
+      }
+    });
+  }
+
+  console.log("get_follow_userinfoの中身", followings);
+  return followings;
+}
+
 
 interface PostData {
   content: string;
@@ -259,57 +378,6 @@ export const getPosts = async (userId?: string): Promise<Post[]> => {
   }
 };
 
-// フォロワーを抽出
-export async function get_following(target_follower: any) {
-  const follow_ref = collection(db, "follows");
-
-  const q = query(follow_ref, where("follower", "==", target_follower));
-
-  const querySnapshot = await getDocs(q);
-  const followings: DocumentData[] = [];
-
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
-    if(data.following) {
-      followings.push(data.following)
-    }
-  })
-
-
-  return followings;
-}
-
-
-export async function get_follower(own_uid: any) {
-  const follow_ref = collection(db, "follows");
-
-  const q = query(follow_ref, where("following", "==", own_uid));
-
-  const querySnapshot = await getDocs(q);
-  const followings: DocumentData[] = [];
-
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
-    if(data.follower) {
-      followings.push(data.follower)
-    }
-  })
-
-
-  return followings;
-}
-
-export async function getFollowingUsers(targetFollowers: any[]): Promise<DocumentData[]> {
-  const follow_list: DocumentData[] = [];
-
-  for (const userUid of targetFollowers) {
-    const data: any = await getUserData(userUid);
-    follow_list.push(data);
-  }
-
-  return follow_list;
-}
-
 export async function updateUserProfile(user: any, userData: any) {
   const uid = user.uid;
 
@@ -351,3 +419,4 @@ export async function checkUserIdExists(targetUserId: string) {
     throw error;
   }
 }
+
