@@ -18,6 +18,7 @@ import {
   arrayUnion,
   orderBy,
   DocumentData,
+  deleteDoc,
 } from "firebase/firestore";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -247,18 +248,30 @@ export async function get_following(currentUserId: string):Promise<string[]> {
 
 
 export async function get_follower(own_uid: any) {
+  const userData = await getUserData(own_uid);
+  
+  if (!userData) {
+    console.error('ユーザーデータが見つかりません');
+    return [];
+  }
+  console.log("get_follower内", userData);
+
+  const { userId } = userData;  
   const follow_ref = collection(db, "follows");
+
+  console.log("userId", userId);
+  
   
 
-  const q = query(follow_ref, where("following", "==", own_uid));
+  const q = query(follow_ref, where("to", "==", userId));
 
   const querySnapshot = await getDocs(q);
   const followings: DocumentData[] = [];
 
   querySnapshot.forEach((doc) => {
     const data = doc.data();
-    if(data.follower) {
-      followings.push(data.follower)
+    if(data.from) {
+      followings.push(data.from)
     }
   })
 
@@ -277,13 +290,43 @@ export async function getFollowingUsers(targetFollower: any[]): Promise<string[]
   return following_list;
 }
 
-export function unfollowing_user(){
+// フォロー外した時の処理
+export async function unfollow_user({targetUserId}: any){
+  console.log(targetUserId);
+  try {
+
+    const follow_ref = collection(db, "follows");
+    
+  
+    const q = query(follow_ref, where("to", "==", targetUserId));
+  
+    const querySnapshot = await getDocs(q);
+    let deletedCount = 0;
+
+    // querySnapshot内の各ドキュメントを削除
+    for (const docSnapshot of querySnapshot.docs) {
+      await deleteDoc(docSnapshot.ref);
+      deletedCount++;
+    }
+
+    console.log(`Deleted ${deletedCount} follow relationship(s)`);
+    return { success: true, deletedCount };
+  } catch (error) {
+    console.error("Error unfollowing user", error);
+  　return {success: false, error: error.message}    
+  }
 
 }
 
-export async function get_follow_userinfo(userIds: string[]): Promise<string[]> {
+interface UserInfo {
+  username: string;
+  userId: string;
+  bid: string;
+}
+
+export async function get_follow_userinfo(userIds: string[]): Promise<UserInfo[]> {
   const user_ref = collection(db, "users");
-  const followings: string[] = [];
+  const followings: UserInfo[] = [];
 
   // バッチで処理するために、userIdsを小さなチャンクに分割
   const chunks = userIds.reduce((resultArray, item, index) => { 
@@ -312,6 +355,33 @@ export async function get_follow_userinfo(userIds: string[]): Promise<string[]> 
 
   console.log("get_follow_userinfoの中身", followings);
   return followings;
+}
+
+// テスト用
+export const testCreateFollowData = async () => {
+  const followsRef = collection(db, "follows");
+  const followsData = [
+    { from: "sei0527", to: "aaaa" },
+    { from: "sei0527", to: "hogehoge" },
+    { from: "sei0527", to: "seiseiseisei" },
+    { from: "sei0527", to: "dadad" },
+    { from: "sei0527", to: "sss_4343" },
+    // 必要に応じて追加のドキュメントを追加
+  ];
+  try {
+    for(const data of followsData) {
+      await addDoc(followsRef, data);
+      console.log("Document added with data:", data);
+    }
+    console.log("All documents have been added successfully");
+  } catch (error) {
+    console.error("Error adding documents: " ,error);
+    
+  }
+}
+
+export const follow_user = () => {
+  
 }
 
 

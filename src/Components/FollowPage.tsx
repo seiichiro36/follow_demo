@@ -8,6 +8,7 @@ import {
   Flex,
   Heading,
   HStack,
+  Spinner,
   Tab,
   TabList,
   TabPanel,
@@ -19,9 +20,9 @@ import {
   Tooltip,
 } from "@chakra-ui/react";
 import { ArrowLeftIcon } from "@chakra-ui/icons";
-import { toggleFollow, updateUserProfile, get_following, get_follower,  getFollowingUsers, get_follow_userinfo } from "./firebase";
+import { toggleFollow, updateUserProfile, get_following, get_follower,  getFollowingUsers, get_follow_userinfo, unfollow_user, testCreateFollowData } from "./firebase";
 import { User } from "firebase/auth";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DocumentData } from "firebase/firestore";
 
 const userData = {
@@ -43,6 +44,8 @@ const list = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1];
 function Follow({user}: any) {
   const [isFollowed, setIsFollow] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  const [ loadingStates, setLoadingStates] = useState({});
 
   const [followingUsers, setFollowingUsers] = useState<string[] | null>([]);
   
@@ -68,24 +71,61 @@ function Follow({user}: any) {
     fetchData();
   }, [user]);
   
-  console.log("followingUsers", followingUsers);
+  // console.log("followingUsers", followingUsers);
 
-  const handleFollow = (username: any) => {
-    // setIsLoading(true);
-    // setTimeout(() => {
-    //   // ここにフォロー処理を記述
-    //   setIsFollow((prev) => !prev);
-    //   setIsLoading(false);
-    // }, 1000)
-    console.log(username);
+
+  // const handleFollow = (userId: any) => {
+  //  function testUnfollow() {
+  //     setIsLoading(true)
+  //     setTimeout(async ()=> {
+  //       await unfollow_user({targetUserId: userId});
+  //       setIsLoading(false)
+  //       await updateFollowList()
+  //     }, 1000 ) 
+  //   }
+  //   testUnfollow();
+  // };
+
+    // ページ更新用関数
+    const  updateFollowList = async() => {
+      const followings = await get_following(user.uid);
+      const following = await get_follow_userinfo(followings);
+      setFollowingUsers(following)
+    }
+
+  const handleFollow = useCallback((userId: any) => {
+    setLoadingStates(prev => ({ ...prev, [userId]: true }));
     
-  };
 
-  console.log("folloeingUsers", followingUsers)
+    const testUnfollow = async () => {
+      try {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulating API delay
+        await unfollow_user({ targetUserId: userId });
+        await updateFollowList();
+      } finally {
+        setLoadingStates(prev => ({ ...prev, [userId]: false }));
+        console.log(loadingStates);
+      }
+    };
+
+    testUnfollow();
+  }, [unfollow_user, updateFollowList]);
+
+
+
+  if (!followingUsers) {
+    return null
+  }
+  
+  const handletestCreate = () => {
+    testCreateFollowData()
+    updateFollowList()
+  }
 
   const tags = ["Python", "ロードバイク", "カメラ"];
   return (
     <>
+    <Button onClick={handletestCreate}>作成</Button>
       {followingUsers.map(({username, userId, bid}: any) => (
         <Card w="90%" variant="elevated" my={2} key={userId}>
         <CardBody>
@@ -118,9 +158,13 @@ function Follow({user}: any) {
             colorScheme={username === username ? "blue" : "green"}
             isLoading={isLoading}
             size="sm"
-            onClick={() => handleFollow(username)}
+            onClick={() => handleFollow(userId)}
+            borderWidth="0"
           >
-            {username === username ? "フォロー済" : "フォロー"}
+            {loadingStates[userId] ?  <Spinner />: "フォロー済み" }
+            {/* {username === username ? "フォロー済" : "フォロー"} */}
+
+           
           </Button>
         </CardFooter>
       </Card>
